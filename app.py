@@ -16,7 +16,8 @@ import numpy as np
 # ─────────────────────────────────────────
 #  OPENROUTER CONFIG (Llama 3 8B — Free)
 # ─────────────────────────────────────────
-OPENROUTER_API_KEY = "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"   # ← paste your key here
+# OPENROUTER_API_KEY = "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" 
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")  # ← paste your key here
 OPENROUTER_URL     = "https://openrouter.ai/api/v1/chat/completions"
 OPENROUTER_HEADERS = {
     "Authorization": f"Bearer {OPENROUTER_API_KEY}",
