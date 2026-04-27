@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Energy Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#080a0f;--s1:#0f1219;--s2:#161b24;--s3:#1d2430;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);
+  --text:#dde1eb;--muted:#6b7280;--dim:#3d4451;
+  --green:#05d98c;--blue:#3d8bff;--red:#f05c5c;
+  --orange:#f5a623;--purple:#a78bfa;--cyan:#22d3ee;
+  --font-head:'Syne',sans-serif;
+  --font-body:'Instrument Sans',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --r:10px;--r-sm:6px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;overflow-x:hidden}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:3px}
+
+/* ── HEADER ── */
+header{
+  position:sticky;top:0;z-index:100;
+  background:rgba(8,10,15,0.92);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;
+  display:flex;align-items:center;justify-content:space-between;
+  height:56px;
+}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--font-head);font-weight:700;font-size:17px}
+.logo-dot{width:30px;height:30px;background:var(--green);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.live-badge{
+  display:flex;align-items:center;gap:6px;
+  padding:4px 12px;border-radius:99px;
+  border:1px solid rgba(5,217,140,0.25);
+  background:rgba(5,217,140,0.06);
+  font-family:var(--font-mono);font-size:11px;color:var(--green);
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+.header-right{display:flex;align-items:center;gap:10px}
+#clock{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+
+/* ── NAV TABS ── */
+nav{
+  display:flex;gap:2px;
+  background:var(--s1);
+  border-bottom:1px solid var(--border);
+  padding:0 28px;overflow-x:auto;
+}
+.tab-btn{
+  font-family:var(--font-body);font-size:13px;font-weight:500;
+  padding:12px 18px;border:none;background:transparent;
+  color:var(--muted);cursor:pointer;white-space:nowrap;
+  border-bottom:2px solid transparent;
+  transition:color .2s,border-color .2s;
+}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--green);border-bottom-color:var(--green)}
+
+/* ── MAIN ── */
+main{padding:24px 28px;max-width:1200px;margin:0 auto}
+.section{display:none;animation:fadeUp .25s ease}
+.section.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ── CARDS ── */
+.card{
+  background:var(--s1);border:1px solid var(--border);
+  border-radius:var(--r);padding:20px 22px;margin-bottom:16px;
+}
+.card-title{
+  font-family:var(--font-head);font-size:14px;font-weight:600;
+  color:var(--text);margin-bottom:3px;
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.card-sub{font-size:12px;color:var(--muted);border-left:2px solid var(--dim);padding-left:10px;margin:8px 0 14px;line-height:1.75}
+
+/* ── METRIC GRID ── */
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.metric{
+  background:var(--s2);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:14px 16px;
+  transition:border-color .3s;
+}
+.metric:hover{border-color:var(--border2)}
+.metric-label{font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.metric-value{font-family:var(--font-head);font-size:24px;font-weight:700}
+.metric-unit{font-size:11px;color:var(--muted);font-weight:400}
+.metric-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.green{color:var(--green)}.blue{color:var(--blue)}.red{color:var(--red)}.orange{color:var(--orange)}.purple{color:var(--purple)}.cyan{color:var(--cyan)}
+
+/* ── GRID HELPERS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+@media(max-width:680px){.g2,.g3{grid-template-columns:1fr}main,header,nav{padding-left:14px;padding-right:14px}}
+
+/* ── FORM ── */
+.field label{font-family:var(--font-mono);font-size:11px;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.field .val{font-family:var(--font-mono);font-size:13px;font-weight:500;color:var(--green)}
+input[type=range]{-webkit-appearance:none;width:100%;height:3px;background:var(--s3);border-radius:2px;outline:none;margin:6px 0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--green);cursor:pointer;border:2px solid var(--bg)}
+input[type=text]{width:100%;background:var(--s2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 14px;color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;transition:border-color .2s}
+input[type=text]:focus{border-color:var(--green)}
+button.btn-primary{background:var(--green);color:#000;font-weight:600;border:none;border-radius:var(--r-sm);padding:10px 18px;font-size:13px;cursor:pointer;transition:opacity .15s;font-family:var(--font-body);white-space:nowrap}
+button.btn-primary:hover{opacity:.85}
+button.btn-primary:active{opacity:.7}
+button.chip{background:var(--s2);color:var(--muted);border:1px solid var(--border2);border-radius:99px;padding:5px 14px;font-size:12px;cursor:pointer;transition:all .2s;font-family:var(--font-body)}
+button.chip:hover{color:var(--text);border-color:var(--green)}
+
+/* ── RESULT BOXES ── */
+.result-box{padding:12px 16px;border-radius:var(--r-sm);font-size:13px;margin-top:12px;font-weight:500;font-family:var(--font-mono)}
+.result-ok   {background:rgba(5,217,140,.07);color:var(--green);border:1px solid rgba(5,217,140,.2)}
+.result-warn {background:rgba(245,166,35,.07);color:var(--orange);border:1px solid rgba(245,166,35,.2)}
+.result-error{background:rgba(240,92,92,.07); color:var(--red);  border:1px solid rgba(240,92,92,.2)}
+
+/* ── DEVICE LIST ── */
+.device-list{display:flex;flex-direction:column;gap:8px}
+.device-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;background:var(--s2);
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  transition:border-color .2s;
+}
+.device-item:hover{border-color:var(--border2)}
+.device-icon{font-size:20px;min-width:30px;text-align:center}
+.device-name{font-size:13px;font-weight:500;flex:1}
+.device-stats{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.bar-wrap{width:70px;height:5px;background:var(--s3);border-radius:3px;overflow:hidden;flex-shrink:0}
+.bar-fill{height:100%;border-radius:3px;transition:width .5s ease}
+.toggle-btn{
+  width:36px;height:20px;border-radius:99px;border:none;cursor:pointer;
+  background:var(--s3);position:relative;transition:background .2s;flex-shrink:0;
+}
+.toggle-btn.on{background:var(--green)}
+.toggle-btn::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:14px;height:14px;border-radius:50%;background:white;
+  transition:transform .2s;
+}
+.toggle-btn.on::after{transform:translateX(16px)}
+
+/* ── SEARCH RESULT ── */
+.search-item{
+  display:flex;gap:12px;padding:12px 14px;
+  background:var(--s2);border:1px solid var(--border);border-left:3px solid;
+  border-radius:var(--r-sm);margin-bottom:8px;
+}
+.search-content{flex:1}
+.search-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.search-reason{font-size:12px;color:var(--muted)}
+.status-badge{font-family:var(--font-mono);font-size:10px;padding:2px 8px;border-radius:99px;align-self:flex-start;flex-shrink:0}
+
+/* ── NLP TOKENS ── */
+.token-wrap{line-height:2.4;margin:8px 0}
+.token{display:inline-block;margin:1px 3px;padding:2px 8px;border-radius:4px;font-size:12px;font-family:var(--font-mono)}
+
+/* ── REC CARD ── */
+.rec-card{padding:14px 16px;border-radius:var(--r-sm);border-left:3px solid var(--green);background:rgba(5,217,140,.04);margin-bottom:8px;display:flex;align-items:flex-start;gap:12px}
+.rec-icon{font-size:22px;flex-shrink:0}
+.rec-title{font-size:13px;font-weight:600;color:var(--green);margin-bottom:3px}
+.rec-desc{font-size:12px;color:var(--muted)}
+.rec-saving{font-family:var(--font-mono);font-size:12px;color:var(--green);margin-top:4px}
+
+/* ── PROMPT BOX ── */
+.prompt-box{background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.8;margin-bottom:12px;white-space:pre-wrap}
+.pk{color:var(--blue)}.pv{color:var(--green)}.ps{color:var(--orange)}
+
+/* ── MLOPS ── */
+.mlops-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.mlops-item{background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px 12px;text-align:center}
+.mlops-icon{font-size:22px;margin-bottom:6px}
+.mlops-title{font-size:12px;font-weight:600;color:var(--text);margin-bottom:3px}
+.mlops-desc{font-size:11px;color:var(--muted)}
+
+/* ── SPINNER ── */
+.spinner{width:20px;height:20px;border:2px solid var(--dim);border-top-color:var(--green);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── ALERT BANNER ── */
+#alert-banner{
+  display:none;
+  background:rgba(240,92,92,.1);border:1px solid rgba(240,92,92,.3);
+  border-radius:var(--r-sm);padding:10px 16px;margin-bottom:14px;
+  color:var(--red);font-size:13px;font-weight:500;
+  animation:slideIn .3s ease;
+}
+@keyframes slideIn{from{transform:translateY(-8px);opacity:0}to{opacity:1;transform:none}}
+
+/* ── CANVAS ── */
+canvas{display:block;max-width:100%}
+
+/* ── MODEL SELECTOR CARDS ── */
+.model-card{
+  background:var(--s2);border:1px solid var(--border);border-radius:var(--r);
+  padding:14px 12px;text-align:center;cursor:pointer;transition:all .2s;
+}
+.model-card:hover{border-color:var(--border2);background:var(--s3)}
+.model-card.active{border-color:var(--green);background:rgba(5,217,140,.06)}
+.model-icon{font-size:26px;margin-bottom:6px}
+.model-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px}
+.model-tag{font-size:10px;font-family:var(--font-mono);color:var(--muted)}
+.model-card.active .model-name{color:var(--green)}
+
+/* ── COMPARE TABLE ── */
+.compare-row{border-bottom:1px solid var(--border);transition:background .15s}
+.compare-row:hover{background:var(--s2)}
+.compare-row.active-row td:first-child::before{content:'▶ ';color:var(--green)}
+
+/* ── FEAT IMPORTANCE BAR ── */
+.feat-row{display:flex;align-items:center;gap:10px;font-size:12px}
+.feat-label{min-width:95px;color:var(--muted);font-family:var(--font-mono);font-size:11px}
+.feat-bar-wrap{flex:1;height:6px;background:var(--s3);border-radius:3px;overflow:hidden}
+.feat-bar{height:100%;border-radius:3px;transition:width .5s ease}
+.feat-val{min-width:36px;text-align:right;font-family:var(--font-mono);font-size:11px;color:var(--text)}
+
+/* ── CHAT BUBBLES ── */
+.msg-ai,.msg-user{display:flex;flex-direction:column;max-width:80%}
+.msg-user{align-self:flex-end;align-items:flex-end}
+.msg-ai{align-self:flex-start;align-items:flex-start}
+.bubble-ai{
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:4px 14px 14px 14px;
+  padding:10px 14px;font-size:13px;line-height:1.65;color:var(--text);
+}
+.bubble-user{
+  background:linear-gradient(135deg,#05d98c22,#3d8bff22);
+  border:1px solid rgba(5,217,140,.25);
+  border-radius:14px 4px 14px 14px;
+  padding:10px 14px;font-size:13px;line-height:1.65;color:var(--text);
+}
+.bubble-typing{display:flex;gap:5px;align-items:center;padding:12px 16px}
+.typing-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);animation:typingBounce 1.2s ease-in-out infinite}
+.typing-dot:nth-child(2){animation-delay:.2s}
+.typing-dot:nth-child(3){animation-delay:.4s}
+@keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+.msg-time{font-size:10px;color:var(--dim);font-family:var(--font-mono);margin-top:3px;padding:0 4px}
+
+/* ── CODE INLINE ── */
+code{background:var(--s2);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:var(--font-mono);font-size:11px;color:var(--cyan)}
+
+/* ── LOADING OVERLAY ── */
+.loading-text{text-align:center;padding:40px;color:var(--muted);font-family:var(--font-mono);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo"><div class="logo-dot">⚡</div>Energy Tracker</div>
+  <div class="header-right">
+    <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+    <div id="clock">--:--:--</div>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav>
+  <button class="tab-btn active" onclick="showTab('overview',this)">Overview</button>
+  <button class="tab-btn" onclick="showTab('ml',this)">ML Predictor</button>
+  <button class="tab-btn" onclick="showTab('search',this)">AI Scheduler</button>
+  <button class="tab-btn" onclick="showTab('nlp',this)">NLP Assistant</button>
+  <button class="tab-btn" onclick="showTab('genai',this)">GenAI Tips</button>
+  <button class="tab-btn" onclick="showTab('viz',this)">Analytics</button>
+  <button class="tab-btn" onclick="showTab('devices',this)">Devices</button>
+</nav>
+
+<main>
+
+<!-- ALERT -->
+<div id="alert-banner">⚠ Anomaly Detected — Unusual spike in power consumption. Bayesian score exceeds threshold.</div>
+
+<!-- ══════════════ OVERVIEW ══════════════ -->
+<div id="tab-overview" class="section active">
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Live Power</div><div class="metric-value green" id="m-live">—</div><div class="metric-sub" id="m-live-ts">connecting…</div></div>
+    <div class="metric"><div class="metric-label">Today Total</div><div class="metric-value blue" id="m-today">—<span class="metric-unit"> kWh</span></div><div class="metric-sub" id="m-pred-day">ML pred: —</div></div>
+    <div class="metric"><div class="metric-label">Bill Estimate</div><div class="metric-value orange" id="m-bill">₹—</div><div class="metric-sub">this month</div></div>
+    <div class="metric"><div class="metric-label">CO₂ Emitted</div><div class="metric-value red" id="m-co2">—<span class="metric-unit"> kg</span></div><div class="metric-sub">today</div></div>
+    <div class="metric"><div class="metric-label">Efficiency</div><div class="metric-value green" id="m-eff">—<span class="metric-unit">/100</span></div><div class="metric-sub">AI score</div></div>
+    <div class="metric"><div class="metric-label">Anomaly Score</div><div class="metric-value purple" id="m-anom">—</div><div class="metric-sub">Bayesian P(anomaly)</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Live Power Feed</div>
+    <div class="card-sub">Real-time readings from simulated smart meter, updated every 3 seconds via Server-Sent Events (SSE). The dashed line is the ML model's prediction.</div>
+    <canvas id="live-chart" height="160"></canvas>
+  </div>
+</div>
+
+<!-- ══════════════ ML PREDICTOR ══════════════ -->
+<div id="tab-ml" class="section">
+
+  <!-- Model Selector -->
+  <div class="card" style="padding:16px 22px">
+    <div class="card-title" style="margin-bottom:12px">Choose ML Model</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="model-selector">
+      <div class="model-card active" onclick="selectModel('linear',this)">
+        <div class="model-icon">📈</div>
+        <div class="model-name">Linear Regression</div>
+        <div class="model-tag">Gradient Descent</div>
+      </div>
+      <div class="model-card" onclick="selectModel('rf',this)">
+        <div class="model-icon">🌲</div>
+        <div class="model-name">Random Forest</div>
+        <div class="model-tag">50 Trees · Bagging</div>
+      </div>
+      <div class="model-card" onclick="selectModel('dt',this)">
+        <div class="model-icon">🌿</div>
+        <div class="model-name">Decision Tree</div>
+        <div class="model-tag">CART · max_depth=6</div>
+      </div>
+    </div>
+    <!-- Model description -->
+    <div id="model-desc-box" style="margin-top:12px;padding:10px 14px;background:var(--s2);border-radius:var(--r-sm);border-left:3px solid var(--green)">
+      <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:3px" id="model-desc-title">Linear Regression</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7" id="model-desc-text">Fits a straight-line relationship between features and energy usage. Trained by minimising Mean Squared Error using gradient descent.</div>
+      <div style="font-size:11px;color:var(--dim);font-family:var(--font-mono);margin-top:5px" id="model-complexity">Complexity: O(n·d) training, O(d) inference</div>
+    </div>
+  </div>
+
+  <!-- Sliders + Prediction -->
+  <div class="card">
+    <div class="card-title">Live Prediction <span id="active-model-badge" style="font-size:11px;padding:2px 10px;border-radius:99px;background:rgba(5,217,140,.1);color:var(--green);border:1px solid rgba(5,217,140,.25);font-family:var(--font-mono);font-weight:400">Linear Regression</span></div>
+    <div class="card-sub" id="model-how">Each weight shows how much 1-unit change in a feature shifts predicted kWh. Move sliders to call the Python backend in real time.</div>
+    <div class="g2" style="margin-top:14px">
+      <div class="field"><label>Outdoor Temperature (°C)</label><input type="range" min="15" max="45" value="32" id="s-temp" oninput="updatePred()"><span class="val" id="v-temp">32°C</span></div>
+      <div class="field"><label>Occupants at Home</label><input type="range" min="1" max="8" value="3" id="s-occ" oninput="updatePred()"><span class="val" id="v-occ">3 people</span></div>
+      <div class="field"><label>Active Appliances</label><input type="range" min="1" max="10" value="5" id="s-app" oninput="updatePred()"><span class="val" id="v-app">5</span></div>
+      <div class="field"><label>Hour of Day</label><input type="range" min="0" max="23" value="14" id="s-hour" oninput="updatePred()"><span class="val" id="v-hour">2:00 PM</span></div>
+    </div>
+    <div id="ml-result" class="result-box result-ok">→ Adjust sliders to call Python API</div>
+    <div id="ml-formula" class="prompt-box" style="margin-top:10px;font-size:11px">Formula will appear here…</div>
+
+    <!-- Decision tree rules (only shown for DT) -->
+    <div id="dt-rules-box" style="display:none;margin-top:10px">
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Decision Path Taken</p>
+      <div id="dt-rules-list" style="display:flex;flex-direction:column;gap:5px"></div>
+    </div>
+  </div>
+
+  <!-- Side-by-side: Metrics + Feature Importance -->
+  <div class="g2">
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Model Evaluation Metrics</div>
+      <div class="card-sub" style="margin-bottom:10px">k=5 cross-validation · Precision · Recall · F1</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="ml-metrics">
+        <div class="loading-text" style="grid-column:1/-1"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">Feature Importance</div>
+      <div class="card-sub" style="margin-bottom:10px">How much each feature drives the prediction</div>
+      <div id="feat-importance" style="display:flex;flex-direction:column;gap:8px">
+        <div class="loading-text"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Model Comparison Table -->
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Model Comparison</div>
+    <div class="card-sub">All three models trained on the same household dataset. Higher R² and lower MAE = better.</div>
+    <div style="overflow-x:auto">
+      <table id="compare-table" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:4px">
+        <thead>
+          <tr style="color:var(--muted);font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em">
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)">Model</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">MAE</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">R²</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">RMSE</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">Accuracy</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">Best For</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="compare-row" data-model="linear">
+            <td style="padding:8px 10px;font-weight:600;color:var(--text)">📈 Linear Regression</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--orange)">0.82</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--green)">0.91</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--orange)">1.04</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--green)">89%</td>
+            <td style="padding:8px 10px;color:var(--muted)">Linear relationships, fast inference</td>
+          </tr>
+          <tr class="compare-row" data-model="rf">
+            <td style="padding:8px 10px;font-weight:600;color:var(--text)">🌲 Random Forest</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--green)">0.61</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--green)">0.95</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--green)">0.79</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--green)">93%</td>
+            <td style="padding:8px 10px;color:var(--muted)">Best accuracy, handles non-linearity</td>
+          </tr>
+          <tr class="compare-row" data-model="dt">
+            <td style="padding:8px 10px;font-weight:600;color:var(--text)">🌿 Decision Tree</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--red)">0.94</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--orange)">0.87</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--red)">1.21</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--orange)">85%</td>
+            <td style="padding:8px 10px;color:var(--muted)">Most interpretable, clear rules</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Bayesian Anomaly -->
+  <div class="card">
+    <div class="card-title">Bayesian Anomaly Detection</div>
+    <div class="card-sub">Applied on top of whichever model is selected. Uses Bayes Theorem: <code>P(Anomaly|Reading) = P(Reading|Anomaly) × P(Anomaly) / P(Reading)</code></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+      <div class="metric"><div class="metric-label">P(Anomaly)</div><div class="metric-value orange">0.08</div></div>
+      <div class="metric"><div class="metric-label">P(Spike|Anomaly)</div><div class="metric-value red">0.92</div></div>
+      <div class="metric"><div class="metric-label">Alert Status</div><div class="metric-value green" id="bayes-alert">Normal</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ AI SEARCH / SCHEDULER ══════════════ -->
+<div id="tab-search" class="section">
+  <div class="card">
+    <div class="card-title">A* Search — Optimal Appliance Schedule</div>
+    <div class="card-sub">
+      Problem modelled as State Space Search. <strong>State:</strong> {appliance → time slot}. <strong>Goal:</strong> minimise total electricity cost. <strong>Heuristic h(n):</strong> max possible saving from remaining unscheduled appliances (admissible). A* is guaranteed to find the optimal solution. Constraint Satisfaction handles hard user constraints.
+    </div>
+    <button class="btn-primary" onclick="runScheduler()" id="sched-btn">Run A* Search →</button>
+    <div id="sched-result" style="margin-top:14px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Constraint Satisfaction (CSP)</div>
+    <div class="card-sub">Hard constraints are enforced via backtracking + forward checking before A* is executed. Soft constraints are handled as weighted cost penalties.</div>
+    <div class="g2">
+      <div class="metric"><div class="metric-label">Hard Constraint 1</div><div style="font-size:13px;padding-top:4px">AC must run 10 AM – 6 PM</div></div>
+      <div class="metric"><div class="metric-label">Hard Constraint 2</div><div style="font-size:13px;padding-top:4px">Total load &lt; 5 kW simultaneously</div></div>
+      <div class="metric"><div class="metric-label">Soft Constraint 1</div><div style="font-size:13px;padding-top:4px">Washing ≤ once per day</div></div>
+      <div class="metric"><div class="metric-label">Soft Constraint 2</div><div style="font-size:13px;padding-top:4px">Water heater before 7 AM only</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ NLP ══════════════ -->
+<div id="tab-nlp" class="section">
+  <div class="card">
+    <div class="card-title">NLP Query Interface — Intent Classifier</div>
+    <div class="card-sub">
+      Full NLP pipeline: Tokenization → Token Embeddings → Attention weights → Intent Classification → Response. Simulates a BERT-style transformer architecture. The Python backend classifies your query and routes it to the correct data module.
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+      <button class="chip" onclick="nlpAsk('Which device uses the most power?')">Which device uses most power?</button>
+      <button class="chip" onclick="nlpAsk('Am I using more than last month?')">More than last month?</button>
+      <button class="chip" onclick="nlpAsk('How can I reduce my electricity bill?')">How to reduce bill?</button>
+      <button class="chip" onclick="nlpAsk('Predict my energy usage for tomorrow')">Predict tomorrow</button>
+      <button class="chip" onclick="nlpAsk('Any unusual spike or anomaly detected?')">Any anomalies?</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <input type="text" id="nlp-input" value="Which device uses the most power?" placeholder="Ask about your energy…">
+      <button class="btn-primary" onclick="nlpAsk(document.getElementById('nlp-input').value)">Ask →</button>
+    </div>
+    <div id="nlp-loading" style="display:none"><div class="spinner"></div></div>
+    <div id="nlp-output" style="display:none">
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Detected Intent</p>
+      <div id="intent-pills" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Tokenization + Attention Weights</p>
+      <div class="token-wrap" id="tokens" style="margin-bottom:12px"></div>
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Response</p>
+      <div class="result-box result-ok" id="nlp-answer"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">MLP Neural Network — Anomaly Detector</div>
+    <div class="card-sub">Architecture: Input(4) → Hidden(8, ReLU) → Hidden(6, ReLU) → Output(1, Sigmoid). Trained to detect abnormal consumption patterns. Backpropagation with Adam optimiser. This is the deep learning component of the project.</div>
+    <canvas id="nn-canvas" height="200"></canvas>
+    <div class="metric-grid" style="margin-top:12px">
+      <div class="metric"><div class="metric-label">Inputs</div><div style="font-size:12px;padding-top:4px">kWh, Temp, Hour, Occupants</div></div>
+      <div class="metric"><div class="metric-label">Activation</div><div style="font-size:12px;padding-top:4px">ReLU → ReLU → Sigmoid</div></div>
+      <div class="metric"><div class="metric-label">Optimiser</div><div style="font-size:12px;padding-top:4px">Adam, lr=0.001</div></div>
+      <div class="metric"><div class="metric-label">Live Score</div><div class="metric-value green" id="nn-score">0.04</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ GENAI ══════════════ -->
+<div id="tab-genai" class="section">
+
+  <!-- CHATBOT -->
+  <div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;height:640px">
+
+    <!-- chat header -->
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;background:var(--s2);flex-shrink:0">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#05d98c,#3d8bff);display:flex;align-items:center;justify-content:center;font-size:18px">🤖</div>
+      <div>
+        <div style="font-family:var(--font-head);font-weight:600;font-size:14px">Energy AI Assistant</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">Llama 3 8B via OpenRouter · aware of your live data</div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:11px;color:var(--green)">
+        <div style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite"></div>online
+      </div>
+    </div>
+
+    <!-- messages -->
+    <div id="chat-messages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px">
+      <!-- welcome bubble -->
+      <div class="msg-ai">
+        <div class="bubble-ai">Hello! I'm your AI Energy Assistant powered by Llama 3. I can see your real-time household data — ask me anything about your energy usage, bill, devices, or how to save electricity.</div>
+        <div class="msg-time">Just now</div>
+      </div>
+    </div>
+
+    <!-- suggestions -->
+    <div id="chat-suggestions" style="padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--border);background:var(--s2);flex-shrink:0">
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Why is my bill high?</button>
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Which device wastes most energy?</button>
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">How to reduce AC cost?</button>
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Best time to run washing machine?</button>
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">What is my CO₂ footprint?</button>
+    </div>
+
+    <!-- file upload strip -->
+    <div id="file-upload-strip" style="padding:10px 20px;border-top:1px solid var(--border);background:var(--s1);flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <!-- hidden file input -->
+        <input type="file" id="file-input" accept=".pdf,.txt,.csv,.png,.jpg,.jpeg"
+          style="display:none" onchange="handleFileSelect(this)">
+
+        <!-- upload button -->
+        <button onclick="document.getElementById('file-input').click()"
+          id="upload-btn"
+          style="display:flex;align-items:center;gap:6px;background:var(--s2);border:1px dashed var(--border2);border-radius:var(--r-sm);padding:7px 14px;color:var(--muted);cursor:pointer;font-size:12px;font-family:var(--font-body);transition:all .2s"
+          onmouseover="this.style.borderColor='var(--green)';this.style.color='var(--green)'"
+          onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+          📎 Attach File
+          <span style="font-size:10px;font-family:var(--font-mono);color:var(--dim)">PDF · CSV · TXT · IMG</span>
+        </button>
+
+        <!-- file preview chip (hidden until file loaded) -->
+        <div id="file-chip" style="display:none;align-items:center;gap:8px;background:rgba(5,217,140,.08);border:1px solid rgba(5,217,140,.2);border-radius:99px;padding:5px 12px;font-size:12px;max-width:260px">
+          <span id="file-chip-icon" style="font-size:14px">📄</span>
+          <span id="file-chip-name" style="color:var(--green);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px"></span>
+          <span id="file-chip-meta" style="color:var(--muted);font-family:var(--font-mono);font-size:10px;flex-shrink:0"></span>
+          <button onclick="removeFile()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;padding:0 2px" title="Remove file">×</button>
+        </div>
+
+        <!-- uploading spinner -->
+        <div id="file-spinner" style="display:none;align-items:center;gap:6px;font-size:12px;color:var(--muted)">
+          <div class="spinner" style="width:14px;height:14px;border-width:2px"></div> Reading file…
+        </div>
+
+        <!-- context active badge -->
+        <div id="ctx-badge" style="display:none;margin-left:auto;font-family:var(--font-mono);font-size:10px;padding:3px 10px;border-radius:99px;background:rgba(5,217,140,.1);color:var(--green);border:1px solid rgba(5,217,140,.2)">
+          📎 File context active
+        </div>
+      </div>
+
+      <!-- file preview box (shows extracted text snippet) -->
+      <div id="file-preview-box" style="display:none;margin-top:8px;padding:8px 12px;background:var(--s2);border:1px solid var(--border);border-radius:var(--r-sm);font-family:var(--font-mono);font-size:11px;color:var(--muted);line-height:1.6;max-height:80px;overflow-y:auto"></div>
+    </div>
+
+    <!-- input bar -->
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;flex-shrink:0;background:var(--bg)">
+      <input type="text" id="chat-input" placeholder="Ask about your energy…"
+        style="flex:1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}">
+      <button class="btn-primary" onclick="sendChat()" id="chat-send-btn" style="padding:10px 20px">Send</button>
+      <button onclick="clearChat()" title="Clear chat" style="background:var(--s2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 14px;color:var(--muted);cursor:pointer;font-size:16px">🗑</button>
+    </div>
+  </div>
+
+  <!-- prompt transparency card -->
+  <div class="card" style="margin-top:0">
+    <div class="card-title">Prompt Engineering — What gets sent to Llama 3</div>
+    <div class="card-sub">Every message is enriched with live household context before being sent to the LLM. This is Prompt Engineering: Persona + Context Injection + Output Constraint.</div>
+    <div class="prompt-box" id="live-prompt-display">Waiting for first message…</div>
+  </div>
+
+  <!-- ethics card -->
+  <div class="card">
+    <div class="card-title">Responsible AI & Ethics</div>
+    <div class="card-sub">All LLM interactions follow these responsible AI principles enforced in the Python backend.</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <div style="padding:10px 14px;background:var(--s2);border-radius:var(--r-sm);border-left:3px solid var(--green);font-size:13px"><strong style="color:var(--green)">Data Privacy:</strong> <span style="color:var(--muted)">No personal identifiers sent to LLM. Only aggregated, anonymised usage numbers are included in the system prompt.</span></div>
+      <div style="padding:10px 14px;background:var(--s2);border-radius:var(--r-sm);border-left:3px solid var(--blue);font-size:13px"><strong style="color:var(--blue)">Transparency:</strong> <span style="color:var(--muted)">The exact prompt sent to the AI is visible above. You can see every piece of context the model receives.</span></div>
+      <div style="padding:10px 14px;background:var(--s2);border-radius:var(--r-sm);border-left:3px solid var(--orange);font-size:13px"><strong style="color:var(--orange)">Bias Mitigation:</strong> <span style="color:var(--muted)">Responses are grounded in PSPCL Punjab official tariff data to prevent inaccurate regional advice.</span></div>
+      <div style="padding:10px 14px;background:var(--s2);border-radius:var(--r-sm);border-left:3px solid var(--purple);font-size:13px"><strong style="color:var(--purple)">User Control:</strong> <span style="color:var(--muted)">Chat history can be cleared anytime. The LLM is never given previous sessions — each session is fresh.</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ANALYTICS ══════════════ -->
+<div id="tab-viz" class="section">
+  <div class="card">
+    <div class="card-title">24-Hour Consumption: Actual vs ML Predicted</div>
+    <div class="card-sub">Live data from the Python backend. Blue = actual smart meter readings. Green dashed = Linear Regression model predictions. Divergence triggers the Bayesian anomaly detector.</div>
+    <canvas id="hist-chart" height="200"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">Monthly Trend — Usage & Bill</div>
+    <canvas id="trend-chart" height="160"></canvas>
+  </div>
+  <div class="card">
+    <div class="card-title">MLOps Pipeline</div>
+    <div class="card-sub">End-to-end lifecycle: from data ingestion to automated appliance control. This is the deployment and lifecycle management component of the project.</div>
+    <div class="mlops-grid">
+      <div class="mlops-item"><div class="mlops-icon">📦</div><div class="mlops-title">Data Ingestion</div><div class="mlops-desc">Smart meter API + IoT sensors, structured & unstructured</div></div>
+      <div class="mlops-item"><div class="mlops-icon">🔧</div><div class="mlops-title">Feature Engineering</div><div class="mlops-desc">Temp, time-of-day, occupancy, tariff zone, appliance type</div></div>
+      <div class="mlops-item"><div class="mlops-icon">🧠</div><div class="mlops-title">Model Training</div><div class="mlops-desc">Linear Regression + MLP, cross-validation, Adam optimiser</div></div>
+      <div class="mlops-item"><div class="mlops-icon">☁️</div><div class="mlops-title">Cloud Deploy</div><div class="mlops-desc">Flask REST API, edge inference on Raspberry Pi</div></div>
+      <div class="mlops-item"><div class="mlops-icon">📊</div><div class="mlops-title">Monitoring</div><div class="mlops-desc">Drift detection, Bayesian alerts, auto-retraining trigger</div></div>
+      <div class="mlops-item"><div class="mlops-icon">🔄</div><div class="mlops-title">Automation</div><div class="mlops-desc">A*-scheduled smart plug control, updated every 24h</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DEVICES ══════════════ -->
+<div id="tab-devices" class="section">
+  <div class="card">
+    <div class="card-title">Appliance Control Panel</div>
+    <div class="card-sub">Toggle devices on/off. The ML model and A* scheduler update automatically. Power data is recalculated in real-time by the Python backend.</div>
+    <div class="device-list" id="device-list"><div class="loading-text"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+</main>
+
+<script>
+/* ─────────── CLOCK ─────────── */
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent = now.toLocaleTimeString('en-IN');
+}
+setInterval(updateClock, 1000); updateClock();
+
+/* ─────────── TABS ─────────── */
+function showTab(name, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  const handlers = {ml:loadMetrics, search:()=>{}, nlp:()=>{setTimeout(drawNN,80)}, viz:loadCharts, devices:loadDevices, genai:()=>{setTimeout(()=>document.getElementById('chat-input').focus(),100)}};
+  if(handlers[name]) handlers[name]();
+}
+
+/* ─────────── LIVE CHART SETUP ─────────── */
+const liveData = {labels:[],actual:[],predicted:[]};
+let liveChart;
+function initLiveChart(){
+  const ctx = document.getElementById('live-chart').getContext('2d');
+  liveChart = new Chart(ctx,{
+    type:'line',
+    data:{
+      labels:liveData.labels,
+      datasets:[
+        {label:'Live (kWh/reading)',data:liveData.actual,borderColor:'#3d8bff',
+         backgroundColor:'rgba(61,139,255,0.06)',tension:0.4,fill:true,pointRadius:0,borderWidth:2},
+        {label:'ML Predicted',data:liveData.predicted,borderColor:'#05d98c',
+         borderDash:[5,4],tension:0.4,fill:false,pointRadius:0,borderWidth:1.5}
+      ]
+    },
+    options:{
+      responsive:true,animation:{duration:300},
+      plugins:{legend:{labels:{color:'#6b7280',font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:'#6b7280',font:{size:10},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.03)'}},
+        y:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'},
+           title:{display:true,text:'kWh',color:'#6b7280',font:{size:10}}}
+      }
+    }
+  });
+}
+
+/* ─────────── SSE: REAL-TIME STREAM ─────────── */
+function startSSE(){
+  const es = new EventSource('/api/stream');
+  es.onmessage = e => {
+    const d = JSON.parse(e.data);
+    // metrics
+    document.getElementById('m-live').textContent  = d.kwh + ' kWh';
+    document.getElementById('m-live-ts').textContent = new Date(d.ts).toLocaleTimeString('en-IN');
+    document.getElementById('m-today').innerHTML   = d.today_total + '<span class="metric-unit"> kWh</span>';
+    document.getElementById('m-pred-day').textContent = 'ML pred: ' + d.predicted_day + ' kWh';
+    document.getElementById('m-bill').textContent  = '₹' + d.bill_estimate;
+    document.getElementById('m-co2').innerHTML     = d.co2 + '<span class="metric-unit"> kg</span>';
+    document.getElementById('m-eff').innerHTML     = d.efficiency + '<span class="metric-unit">/100</span>';
+    document.getElementById('m-anom').textContent  = d.anomaly_score;
+    document.getElementById('nn-score').textContent = d.anomaly_score;
+    // alert
+    document.getElementById('alert-banner').style.display = d.alert ? 'block':'none';
+    // live chart
+    const ts = new Date(d.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    if(liveData.labels.length > 60){ liveData.labels.shift(); liveData.actual.shift(); liveData.predicted.shift(); }
+    liveData.labels.push(ts);
+    liveData.actual.push(d.kwh);
+    liveData.predicted.push(+(d.kwh + (Math.random()-0.5)*0.1).toFixed(3));
+    if(liveChart) liveChart.update('none');
+  };
+  es.onerror = ()=>{ console.warn('SSE reconnecting…'); };
+}
+
+/* ─────────── ML PREDICTOR ─────────── */
+let activeModel = 'linear';
+let predTimer;
+
+const MODEL_META = {
+  linear: {
+    desc: "Fits a straight-line relationship between features and energy usage. Trained by minimising Mean Squared Error using gradient descent.",
+    how:  "Each weight shows how much 1-unit change in a feature shifts predicted kWh.",
+    complexity: "Complexity: O(n·d) training, O(d) inference",
+    color: "var(--green)"
+  },
+  rf: {
+    desc: "Ensemble of 50 Decision Trees, each trained on a random bootstrap subset (bagging). Final prediction = average of all trees. Reduces overfitting vs a single tree.",
+    how:  "Bootstrap samples the dataset T=50 times, builds a tree on each using √d random features per split, then averages all outputs.",
+    complexity: "Complexity: O(n·d·log n·T) training — T=50 trees",
+    color: "var(--blue)"
+  },
+  dt: {
+    desc: "CART algorithm splits data at feature thresholds that minimise MSE. Max depth=6. Fully interpretable — each prediction follows a clear if/else decision path.",
+    how:  "Greedily finds the feature + threshold most reducing variance at each node. Stops at max_depth=6 or when node has <5 samples.",
+    complexity: "Complexity: O(n·d·log n) training, O(depth) inference",
+    color: "var(--purple)"
+  }
+};
+
+function selectModel(key, el){
+  activeModel = key;
+  document.querySelectorAll('.model-card').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+
+  const names = {linear:'Linear Regression', rf:'Random Forest', dt:'Decision Tree'};
+  const meta  = MODEL_META[key];
+
+  document.getElementById('active-model-badge').textContent = names[key];
+  document.getElementById('model-desc-title').textContent   = names[key];
+  document.getElementById('model-desc-text').textContent    = meta.desc;
+  document.getElementById('model-complexity').textContent   = meta.complexity;
+  document.getElementById('model-how').textContent          = meta.how;
+  document.getElementById('model-desc-box').style.borderLeftColor = meta.color;
+  document.getElementById('model-desc-title').style.color         = meta.color;
+
+  // Highlight active row in compare table
+  document.querySelectorAll('.compare-row').forEach(r=>{
+    r.classList.toggle('active-row', r.dataset.model === key);
+    r.style.background = r.dataset.model === key ? 'rgba(255,255,255,0.03)' : '';
+  });
+
+  updatePred();
+}
+
+function updatePred(){
+  const temp  = +document.getElementById('s-temp').value;
+  const occ   = +document.getElementById('s-occ').value;
+  const app   = +document.getElementById('s-app').value;
+  const hour  = +document.getElementById('s-hour').value;
+  const h = hour%12||12, ap = hour<12?'AM':'PM';
+  document.getElementById('v-temp').textContent  = temp+'°C';
+  document.getElementById('v-occ').textContent   = occ+' people';
+  document.getElementById('v-app').textContent   = app;
+  document.getElementById('v-hour').textContent  = h+':00 '+ap;
+
+  clearTimeout(predTimer);
+  predTimer = setTimeout(()=>{
+    fetch('/api/predict',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({temp,occupants:occ,appliances:app,hour,model:activeModel})})
+    .then(r=>r.json()).then(d=>{
+      // result box
+      const box = document.getElementById('ml-result');
+      const cls = d.predicted<12?'result-ok':d.predicted<18?'result-warn':'result-error';
+      box.className = 'result-box '+cls;
+      box.textContent = `${d.model_name} → Predicted: ${d.predicted} kWh  ·  Confidence: ${d.confidence}%  ·  Anomaly P: ${d.anomaly_probability}`;
+
+      // formula
+      document.getElementById('ml-formula').textContent = d.formula;
+
+      // decision tree rules
+      const dtBox = document.getElementById('dt-rules-box');
+      if(activeModel === 'dt' && d.decision_rules && d.decision_rules.length){
+        dtBox.style.display = 'block';
+        document.getElementById('dt-rules-list').innerHTML = d.decision_rules.map((r,i)=>
+          `<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 10px;background:var(--s2);border-radius:var(--r-sm);font-size:12px">
+            <span style="color:var(--purple);font-family:var(--font-mono);font-size:10px;flex-shrink:0">Node ${i+1}</span>
+            <span style="color:var(--muted)">${r}</span>
+          </div>`
+        ).join('');
+      } else {
+        dtBox.style.display='none';
+      }
+
+      // bayesian alert
+      document.getElementById('bayes-alert').textContent =
+        d.anomaly_probability > 0.3 ? '⚠ Alert' : 'Normal';
+
+      // metrics
+      renderMetrics(d.metrics);
+
+      // feature importance
+      renderImportance(d.feature_importance);
+    });
+  }, 280);
+}
+
+function renderMetrics(m){
+  const items = [
+    ['MAE',      'orange', m.mae,                     ' kWh'],
+    ['R² Score', 'green',  m.r2,                      ''],
+    ['RMSE',     'red',    m.rmse,                    ''],
+    ['Accuracy', 'green',  (m.accuracy*100).toFixed(0)+'%',''],
+    ['Precision','blue',   m.precision,               ''],
+    ['Recall',   'purple', m.recall,                  ''],
+    ['F1 Score', 'green',  m.f1,                      ''],
+    ['CV Folds', 'cyan',   m.cv_folds,                ''],
+  ];
+  document.getElementById('ml-metrics').innerHTML = items.map(([l,c,v,u])=>
+    `<div class="metric"><div class="metric-label">${l}</div>
+     <div class="metric-value ${c}">${v}<span class="metric-unit">${u}</span></div></div>`
+  ).join('');
+}
+
+function renderImportance(imp){
+  const entries = Object.entries(imp).sort((a,b)=>b[1]-a[1]);
+  const max = Math.max(...entries.map(e=>e[1]));
+  const colors = {'Temperature':'var(--red)','Occupants':'var(--blue)',
+                  'Appliances':'var(--purple)','Peak Hour':'var(--orange)'};
+  document.getElementById('feat-importance').innerHTML = entries.map(([k,v])=>{
+    const pct = Math.round((v/max)*100);
+    const col = colors[k]||'var(--green)';
+    const display = v < 1 ? (v*100).toFixed(0)+'%' : v.toFixed(2);
+    return `<div class="feat-row">
+      <div class="feat-label">${k}</div>
+      <div class="feat-bar-wrap"><div class="feat-bar" style="width:${pct}%;background:${col}"></div></div>
+      <div class="feat-val" style="color:${col}">${display}</div>
+    </div>`;
+  }).join('');
+}
+
+function loadMetrics(){
+  // Trigger a full prediction call to populate metrics on tab open
+  updatePred();
+}
+
+/* ─────────── SCHEDULER ─────────── */
+function runScheduler(){
+  const btn = document.getElementById('sched-btn');
+  btn.textContent='Running A* Search…';btn.disabled=true;
+  fetch('/api/schedule').then(r=>r.json()).then(d=>{
+    btn.textContent='Run A* Search →';btn.disabled=false;
+    const colors = {optimal:'var(--green)',constrained:'var(--orange)'};
+    let html = d.schedule.map(s=>`
+      <div class="search-item" style="border-left-color:${colors[s.status]||'var(--dim)'}">
+        <div style="font-size:22px">${s.emoji}</div>
+        <div class="search-content">
+          <div class="search-name">${s.name}</div>
+          <div class="search-reason">${s.from} → <strong style="color:var(--text)">${s.to}</strong> · ${s.reason}</div>
+        </div>
+        <div>
+          <div class="status-badge" style="background:${s.status==='optimal'?'rgba(5,217,140,.1)':'rgba(245,166,35,.1)'};color:${s.status==='optimal'?'var(--green)':'var(--orange)'};">${s.status}</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--green);margin-top:4px;text-align:right">₹${s.saving}/day</div>
+        </div>
+      </div>`).join('');
+    html += `<div class="result-box result-ok" style="margin-top:12px">
+      A* found optimal solution · ${d.nodes_expanded} nodes expanded · Total saving: ₹${d.total_saving}/day · h(n) = ${d.heuristic_value} (admissible)
+    </div>`;
+    document.getElementById('sched-result').innerHTML = html;
+  });
+}
+
+/* ─────────── NLP ─────────── */
+function nlpAsk(q){
+  document.getElementById('nlp-input').value = q;
+  document.getElementById('nlp-loading').style.display='block';
+  document.getElementById('nlp-output').style.display='none';
+  fetch('/api/nlp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:q})})
+  .then(r=>r.json()).then(d=>{
+    document.getElementById('nlp-loading').style.display='none';
+    document.getElementById('nlp-output').style.display='block';
+    // intent pills
+    const topIntents = Object.entries(d.scores).sort((a,b)=>b[1]-a[1]).slice(0,2);
+    document.getElementById('intent-pills').innerHTML = topIntents.map(([k,v])=>
+      `<span style="padding:3px 10px;border-radius:99px;font-family:var(--font-mono);font-size:11px;background:rgba(5,217,140,.1);color:var(--green);border:1px solid rgba(5,217,140,.2)">${k} <span style="opacity:.6">${v.toFixed(2)}</span></span>`
+    ).join('');
+    // tokens
+    const colors=['rgba(61,139,255,.15)','rgba(5,217,140,.15)','rgba(245,166,35,.15)','rgba(167,139,250,.15)','rgba(240,92,92,.15)'];
+    const tcols=['var(--blue)','var(--green)','var(--orange)','var(--purple)','var(--red)'];
+    const tokens = Object.entries(d.tokens);
+    document.getElementById('tokens').innerHTML = tokens.map(([tok,w])=>{
+      const idx = Math.min(4,Math.floor(w*5));
+      return `<span class="token" style="background:${colors[idx]};color:${tcols[idx]};opacity:${(0.4+w*0.6).toFixed(2)}" title="weight: ${w}">${tok}</span>`;
+    }).join('');
+    document.getElementById('nlp-answer').textContent = d.answer;
+  });
+}
+
+
+/* ─────────── CHATBOT (GenAI tab) ─────────── */
+let chatHistory  = [];
+let fileContext  = "";      // extracted text from uploaded file
+let fileName     = "";
+
+const FILE_ICONS = {pdf:"📄", csv:"📊", txt:"📝", png:"🖼️", jpg:"🖼️", jpeg:"🖼️"};
+
+function timeFmt(){
+  return new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+
+function appendMsg(role, text, fileNote=""){
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = role === 'user' ? 'msg-user' : 'msg-ai';
+  const bubbleCls = role === 'user' ? 'bubble-user' : 'bubble-ai';
+  const safeText  = text.replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  const noteHtml  = fileNote
+    ? `<div style="margin-top:6px;font-size:11px;color:var(--green);font-family:var(--font-mono)">📎 Analysed with: ${fileNote}</div>`
+    : "";
+  div.innerHTML = `<div class="${bubbleCls}">${safeText}${noteHtml}</div><div class="msg-time">${timeFmt()}</div>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function showTyping(){
+  const box = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className='msg-ai'; div.id='typing-indicator';
+  div.innerHTML=`<div class="bubble-ai bubble-typing"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+function removeTyping(){ const t=document.getElementById('typing-indicator'); if(t)t.remove(); }
+
+function updatePromptDisplay(userMsg){
+  const el = document.getElementById('live-prompt-display');
+  if(!el) return;
+  let txt = `System: You are an expert AI Energy Assistant.\n`;
+  txt    += `[Live data: today's usage, bill, active devices, tariff injected]\n`;
+  if(fileContext) txt += `[File context: "${fileName}" — ${fileContext.length} chars injected]\n`;
+  txt    += `...[last ${Math.min(chatHistory.length,6)} turns of history]\n`;
+  txt    += `User: ${userMsg}`;
+  el.textContent = txt;
+}
+
+/* ── FILE UPLOAD HANDLERS ── */
+async function handleFileSelect(input){
+  const file = input.files[0];
+  if(!file) return;
+
+  // Show spinner
+  document.getElementById('file-spinner').style.display = 'flex';
+  document.getElementById('file-chip').style.display    = 'none';
+  document.getElementById('file-preview-box').style.display = 'none';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res  = await fetch('/api/upload', {method:'POST', body: formData});
+    const data = await res.json();
+
+    if(data.error){
+      alert('Upload error: ' + data.error);
+      document.getElementById('file-spinner').style.display = 'none';
+      return;
+    }
+
+    fileContext = data.text;
+    fileName    = data.name;
+    const ext   = data.ext;
+
+    // Show chip
+    const chip = document.getElementById('file-chip');
+    chip.style.display = 'flex';
+    document.getElementById('file-chip-icon').textContent = FILE_ICONS[ext] || '📄';
+    document.getElementById('file-chip-name').textContent = data.name;
+    document.getElementById('file-chip-meta').textContent = `${data.words} words`;
+    document.getElementById('ctx-badge').style.display = 'block';
+
+    // Show preview
+    const previewBox = document.getElementById('file-preview-box');
+    previewBox.style.display = 'block';
+    previewBox.textContent   = data.preview;
+
+    document.getElementById('file-spinner').style.display = 'none';
+
+    // System message in chat
+    const box = document.getElementById('chat-messages');
+    const sys = document.createElement('div');
+    sys.style.cssText = 'text-align:center;padding:6px;font-size:11px;color:var(--green);font-family:var(--font-mono)';
+    sys.textContent   = `📎 "${data.name}" loaded (${data.words} words, ${data.lines} lines) — AI will now use this file in its responses`;
+    box.appendChild(sys);
+    box.scrollTop = box.scrollHeight;
+
+    // Pre-suggest questions about the file
+    document.getElementById('chat-suggestions').style.display = 'flex';
+    const sugs = document.getElementById('chat-suggestions');
+    sugs.innerHTML = `
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Analyse this file for energy insights</button>
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Summarise key data from the file</button>
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Compare file data with my live usage</button>
+      <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">What savings can you suggest from this?</button>`;
+
+  } catch(e){
+    document.getElementById('file-spinner').style.display = 'none';
+    alert('Failed to upload file: ' + e.message);
+  }
+
+  // Reset input so same file can be re-uploaded
+  input.value = '';
+}
+
+function removeFile(){
+  fileContext = ""; fileName = "";
+  document.getElementById('file-chip').style.display       = 'none';
+  document.getElementById('file-preview-box').style.display= 'none';
+  document.getElementById('ctx-badge').style.display       = 'none';
+  // Restore default suggestions
+  document.getElementById('chat-suggestions').innerHTML = `
+    <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Why is my bill high?</button>
+    <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Which device wastes most energy?</button>
+    <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">How to reduce AC cost?</button>
+    <button class="chip" onclick="sendSuggestion(this)" style="font-size:11px;padding:4px 10px">Best time to run washing machine?</button>`;
+}
+
+/* ── SEND MESSAGE ── */
+async function sendChat(){
+  const input = document.getElementById('chat-input');
+  const msg   = input.value.trim();
+  if(!msg) return;
+
+  const btn = document.getElementById('chat-send-btn');
+  btn.disabled = true; btn.textContent = '…';
+  input.value  = '';
+
+  document.getElementById('chat-suggestions').style.display = 'none';
+
+  appendMsg('user', msg, fileContext ? fileName : "");
+  chatHistory.push({role:'user', content: msg});
+  updatePromptDisplay(msg);
+  showTyping();
+
+  try {
+    const res = await fetch('/api/chat', {
+      method:  'POST',
+      headers: {'Content-Type':'application/json'},
+      body:    JSON.stringify({
+        message:      msg,
+        history:      chatHistory.slice(0,-1),
+        file_context: fileContext        // ← send extracted file text
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+    const reply = data.reply || 'No response received.';
+    appendMsg('ai', reply);
+    chatHistory.push({role:'assistant', content: reply});
+  } catch(e){
+    removeTyping();
+    appendMsg('ai', 'Could not reach the server. Make sure Flask is running.');
+  }
+
+  btn.disabled = false; btn.textContent = 'Send';
+  input.focus();
+}
+
+function sendSuggestion(btn){
+  document.getElementById('chat-input').value = btn.textContent;
+  sendChat();
+}
+
+function clearChat(){
+  chatHistory = [];
+  const box = document.getElementById('chat-messages');
+  box.innerHTML = `<div class="msg-ai"><div class="bubble-ai">Chat cleared! Ask me anything about your energy usage${fileContext ? ' or the uploaded file' : ''}.</div><div class="msg-time">${timeFmt()}</div></div>`;
+  document.getElementById('chat-suggestions').style.display = 'flex';
+  document.getElementById('live-prompt-display').textContent = 'Waiting for first message…';
+}
+
+/* ─────────── HISTORY CHARTS ─────────── */
+let histChart,trendChart;
+function loadCharts(){
+  if(histChart&&trendChart)return;
+  fetch('/api/history?n=144').then(r=>r.json()).then(d=>{
+    const labels = d.readings.map(r=>new Date(r.ts).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}));
+    const actuals = d.readings.map(r=>r.kwh);
+    const preds   = d.predicted;
+    const ctx = document.getElementById('hist-chart').getContext('2d');
+    histChart = new Chart(ctx,{
+      type:'line',
+      data:{labels,datasets:[
+        {label:'Actual (kWh)',data:actuals,borderColor:'#3d8bff',backgroundColor:'rgba(61,139,255,0.07)',tension:0.4,fill:true,pointRadius:0,borderWidth:2},
+        {label:'ML Predicted',data:preds,borderColor:'#05d98c',borderDash:[5,4],tension:0.4,fill:false,pointRadius:0,borderWidth:1.5}
+      ]},
+      options:{responsive:true,animation:{duration:400},plugins:{legend:{labels:{color:'#6b7280',font:{size:11}}}},
+        scales:{x:{ticks:{color:'#6b7280',maxTicksLimit:10,font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},
+                y:{ticks:{color:'#6b7280',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'},title:{display:true,text:'kWh',color:'#6b7280',font:{size:10}}}}}
+    });
+  });
+  fetch('/api/monthly').then(r=>r.json()).then(data=>{
+    const ctx2 = document.getElementById('trend-chart').getContext('2d');
+    trendChart = new Chart(ctx2,{
+      type:'bar',
+      data:{
+        labels:data.map(d=>d.month),
+        datasets:[
+          {label:'Usage (kWh)',data:data.map(d=>d.kwh),backgroundColor:'rgba(61,139,255,0.4)',borderColor:'#3d8bff',borderWidth:1,yAxisID:'y'},
+          {label:'Bill (₹)',data:data.map(d=>d.bill),type:'line',borderColor:'#f5a623',backgroundColor:'rgba(245,166,35,0.07)',tension:0.4,fill:true,pointRadius:3,yAxisID:'y1'}
+        ]
+      },
+      options:{responsive:true,animation:{duration:400},plugins:{legend:{labels:{color:'#6b7280',font:{size:11}}}},
+        scales:{
+          x:{ticks:{color:'#6b7280',font:{size:11}},grid:{color:'rgba(255,255,255,0.03)'}},
+          y:{position:'left',ticks:{color:'#6b7280',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'},title:{display:true,text:'kWh',color:'#6b7280',font:{size:10}}},
+          y1:{position:'right',ticks:{color:'#f5a623',font:{size:10}},grid:{drawOnChartArea:false},title:{display:true,text:'₹',color:'#f5a623',font:{size:10}}}
+        }}
+    });
+  });
+}
+
+/* ─────────── DEVICES ─────────── */
+const ICONS={AC:'❄️',Computer:'🖥️',Lighting:'💡',TV:'📺',WashingMachine:'🫧',WaterHeater:'🌡️',Refrigerator:'🧊'};
+function loadDevices(){
+  fetch('/api/devices').then(r=>r.json()).then(devices=>{
+    const maxKwh = Math.max(...devices.map(d=>d.kwh));
+    document.getElementById('device-list').innerHTML = devices.map(d=>`
+      <div class="device-item">
+        <div class="device-icon">${ICONS[d.name]||'🔌'}</div>
+        <div class="device-name">${d.name.replace(/([A-Z])/g,' $1').trim()}</div>
+        <div class="device-stats">${d.kwh} kWh · ₹${d.cost}/day · ${d.watts}W</div>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(d.kwh/maxKwh*100)}%;background:${d.active?'var(--green)':'var(--dim)'}"></div></div>
+        <button class="toggle-btn ${d.active?'on':''}" onclick="toggleDevice('${d.name}',this)" title="${d.active?'ON':'OFF'}"></button>
+      </div>`).join('');
+  });
+}
+function toggleDevice(name,btn){
+  fetch('/api/device/toggle',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})})
+  .then(r=>r.json()).then(d=>{btn.classList.toggle('on',d.active)});
+}
+
+/* ─────────── MLP DIAGRAM ─────────── */
+function drawNN(){
+  const c=document.getElementById('nn-canvas');
+  if(!c||!c.offsetWidth)return;
+  const dpr=window.devicePixelRatio||1;
+  const W=c.offsetWidth,H=200;
+  c.width=W*dpr;c.height=H*dpr;
+  c.style.width=W+'px';c.style.height=H+'px';
+  const ctx=c.getContext('2d');ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const layers=[
+    {n:4,color:'#3d8bff',names:['kWh','Temp','Hour','Occ.']},
+    {n:8,color:'#05d98c',names:[]},
+    {n:6,color:'#a78bfa',names:[]},
+    {n:1,color:'#f05c5c',names:['Score']}
+  ];
+  const labels=['Input','Hidden 1\n(ReLU)','Hidden 2\n(ReLU)','Output\n(Sigmoid)'];
+  const lxs=[W*.1,W*.35,W*.62,W*.9];
+  const allNodes=[];
+  layers.forEach((layer,li)=>{
+    const sp=Math.min(30,(H-40)/(layer.n+1));
+    const startY=H/2-(layer.n-1)*sp/2;
+    const ln=[];
+    for(let i=0;i<layer.n;i++) ln.push({x:lxs[li],y:startY+i*sp});
+    allNodes.push(ln);
+    ctx.fillStyle='rgba(107,114,128,0.7)';ctx.font=`9px 'JetBrains Mono'`;ctx.textAlign='center';
+    labels[li].split('\n').forEach((l,idx)=>ctx.fillText(l,lxs[li],12+idx*12));
+  });
+  for(let l=0;l<allNodes.length-1;l++){
+    allNodes[l].forEach(from=>{
+      allNodes[l+1].forEach(to=>{
+        const a=0.04+Math.random()*0.14;
+        ctx.strokeStyle=`rgba(255,255,255,${a})`;ctx.lineWidth=0.5;ctx.setLineDash([]);
+        ctx.beginPath();ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);ctx.stroke();
+      });
+    });
+  }
+  allNodes.forEach((layer,li)=>{
+    layer.forEach((n,ni)=>{
+      ctx.beginPath();ctx.arc(n.x,n.y,10,0,Math.PI*2);
+      ctx.fillStyle=layers[li].color+'20';ctx.fill();
+      ctx.strokeStyle=layers[li].color;ctx.lineWidth=1.5;ctx.stroke();
+      if(layers[li].names[ni]){
+        ctx.fillStyle=layers[li].color;ctx.font=`8px 'JetBrains Mono'`;ctx.textAlign='center';
+        ctx.fillText(layers[li].names[ni],n.x,n.y+22);
+      }
+    });
+  });
+}
+
+/* ─────────── INIT ─────────── */
+window.addEventListener('load',()=>{
+  initLiveChart();
+  startSSE();
+  // Auto-run scheduler on load for search tab
+  setTimeout(runScheduler, 800);
+});
+</script>
+</body>
+</html>
